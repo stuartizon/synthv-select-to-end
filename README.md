@@ -40,14 +40,35 @@ If all your notes are in the main group — the default — none of this matters
 
 ## Development
 
-SynthV runs scripts in Duktape, an **ECMAScript 5.1** engine, so the script
-sticks to ES5: `var` and `function`, no `let`/`const`, arrow functions,
-template literals, or other ES6+ syntax.
+Run the tests (plain Node, no framework):
+
+```sh
+node test/selectToEnd.test.js
+```
+
+The tests load the real `SelectToEndOfTrack.js` into a Node `vm` context
+against a fake `SV` object ([test/fakeSV.js](test/fakeSV.js)) that models
+notes, note groups, group time offsets, and the selection. They check the
+script's logic against that model, not SynthV itself, so behaviour still
+needs a quick check in SynthV after any change.
+
+### The ES5/Duktape constraint
+
+SynthV runs scripts in Duktape, an **ECMAScript 5.1** engine — not Node, not
+a modern browser. `SelectToEndOfTrack.js` must stick to ES5 syntax:
+
+- No `let` / `const` — use `var`.
+- No arrow functions — use `function`.
+- No template literals — use string concatenation.
+- No destructuring, `for...of`, spread/rest, classes, or other ES6+ syntax.
+
+The files under `test/` run in Node and aren't loaded by SynthV, so they
+aren't bound by this constraint.
 
 ## Releases
 
-Pushing to `main` with a change to `SelectToEndOfTrack.js` automatically bumps
-a semver tag and publishes the script as a GitHub Release
+Pushing to `main` with a change to `SelectToEndOfTrack.js` runs the tests,
+then bumps a semver tag and publishes the script as a GitHub Release
 ([.github/workflows/release.yml](.github/workflows/release.yml)). The bump is a
 **patch** by default; include a `Version-Bump: minor` or `Version-Bump: major`
 trailer in the commit message to bump differently.

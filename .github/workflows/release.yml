@@ -20,6 +20,13 @@ jobs:
         with:
           fetch-depth: 0
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Run tests
+        run: node test/selectToEnd.test.js
+
       - name: Determine version bump level
         id: bump
         run: |
