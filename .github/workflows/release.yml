@@ -1,0 +1,74 @@
+name: Release
+
+# Auto-bumps a semver tag and publishes a GitHub Release with the script
+# attached, but only when a push to main actually touches the script -
+# docs/CI-only commits don't cut a release.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'SelectToEndOfTrack.js'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Determine version bump level
+        id: bump
+        run: |
+          if [ "${{ github.event.before }}" = "0000000000000000000000000000000000000000" ]; then
+            LOG=$(git log -1 --pretty=%B "${{ github.event.after }}")
+          else
+            LOG=$(git log "${{ github.event.before }}..${{ github.event.after }}" --pretty=%B)
+          fi
+
+          # Default bump is patch. An explicit "Version-Bump: minor" or
+          # "Version-Bump: major" trailer in the pushed commits overrides it.
+          if echo "$LOG" | grep -qiE '^Version-Bump:[[:space:]]*major'; then
+            echo "level=major" >> "$GITHUB_OUTPUT"
+          elif echo "$LOG" | grep -qiE '^Version-Bump:[[:space:]]*minor'; then
+            echo "level=minor" >> "$GITHUB_OUTPUT"
+          else
+            echo "level=patch" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Compute next version
+        id: version
+        run: |
+          LATEST=$(git tag --list 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -n1)
+          if [ -z "$LATEST" ]; then
+            LATEST="v0.0.0"
+          fi
+          LATEST=${LATEST#v}
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$LATEST"
+
+          case "${{ steps.bump.outputs.level }}" in
+            major) MAJOR=$((MAJOR + 1)); MINOR=0; PATCH=0 ;;
+            minor) MINOR=$((MINOR + 1)); PATCH=0 ;;
+            patch) PATCH=$((PATCH + 1)) ;;
+          esac
+
+          echo "version=v$MAJOR.$MINOR.$PATCH" >> "$GITHUB_OUTPUT"
+
+      - name: Tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "${{ steps.version.outputs.version }}" -m "${{ steps.version.outputs.version }}"
+          git push origin "${{ steps.version.outputs.version }}"
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ steps.version.outputs.version }}" \
+            SelectToEndOfTrack.js \
+            --title "${{ steps.version.outputs.version }}" \
+            --generate-notes
