@@ -46,6 +46,9 @@ Run the tests (plain Node, no framework):
 node test/selectToEnd.test.js
 ```
 
+CI runs them on every push and pull request
+([.github/workflows/test.yml](.github/workflows/test.yml)).
+
 The tests load the real `SelectToEndOfTrack.js` into a Node `vm` context
 against a fake `SV` object ([test/fakeSV.js](test/fakeSV.js)) that models
 notes, note groups, group time offsets, and the selection. They check the

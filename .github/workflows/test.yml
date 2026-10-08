@@ -1,0 +1,21 @@
+name: Test
+
+# Runs the tests on every push and pull request, whatever files changed.
+# The release workflow runs them again before tagging, so a failing test
+# also blocks a release.
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Run tests
+        run: node test/selectToEnd.test.js
